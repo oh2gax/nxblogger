@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Settings – Maintenance{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <div class="card">
+    <h1>Blog settings</h1>
+    <form method="post" class="form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="form" value="site">
+      <label>Blog title
+        <input type="text" name="blog_title" value="{{ values.blog_title }}" maxlength="120" required>
+      </label>
+      <label>Subtitle
+        <input type="text" name="blog_subtitle" value="{{ values.blog_subtitle }}" maxlength="200">
+      </label>
+      <label>Footer text
+        <input type="text" name="footer_text" value="{{ values.footer_text }}" maxlength="300" placeholder="© OH2GAX">
+      </label>
+      <label>Posts per page
+        <input type="number" name="posts_per_page" value="{{ values.posts_per_page }}" min="1" max="50">
+      </label>
+      <button type="submit" class="btn">Save settings</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h1>Change password</h1>
+    <p class="muted">Admin user: <strong>{{ admin_user }}</strong>. The password is stored only as a salted scrypt hash.</p>
+    <form method="post" class="form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="form" value="password">
+      <input type="text" name="username" value="{{ admin_user }}" autocomplete="username" hidden>
+      <label>Current password
+        <input type="password" name="current_password" autocomplete="current-password" required>
+      </label>
+      <label>New password <small class="muted">min 8 characters</small>
+        <input type="password" name="new_password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <label>Repeat new password
+        <input type="password" name="confirm_password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <button type="submit" class="btn">Change password</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

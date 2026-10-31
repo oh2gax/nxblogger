@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} – {{ blog_title }}{% endblock %}
+{% block description %}{{ post.excerpt }}{% endblock %}
+{% block content %}
+<article class="card post">
+  {% if post.status != 'published' %}
+  <div class="flash flash-info">This is a draft – only you can see it.</div>
+  {% endif %}
+  <header class="post-head">
+    <time class="date" datetime="{{ post.published_at }}">{{ post.published_at | date }}</time>
+    <h1>{{ post.title }}</h1>
+    {% if tags %}
+    <div class="tags">{% for t in tags %}<a class="tag" href="{{ url_for('public.tag', tag=t) }}">{{ t }}</a>{% endfor %}</div>
+    {% endif %}
+    {% if logged_in %}
+    <div class="post-admin"><a class="btn btn-soft btn-sm" href="{{ url_for('admin.edit_post', post_id=post.id) }}">Edit post</a></div>
+    {% endif %}
+  </header>
+  {% if post.cover_image and post.cover_image not in post.content %}
+  <p><img src="{{ post.cover_image }}" alt=""></p>
+  {% endif %}
+  <div class="post-content">{{ post.content | safe }}</div>
+</article>
+
+<nav class="post-nav">
+  {% if older %}<a class="btn btn-soft" href="{{ url_for('public.post', slug=older.slug) }}">← {{ older.title | truncate(40) }}</a>{% else %}<span></span>{% endif %}
+  {% if newer %}<a class="btn btn-soft" href="{{ url_for('public.post', slug=newer.slug) }}">{{ newer.title | truncate(40) }} →</a>{% endif %}
+</nav>
+
+<div class="lightbox" id="lightbox" hidden><img alt=""></div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/post.js') }}?v={{ app_version }}" defer></script>{% endblock %}

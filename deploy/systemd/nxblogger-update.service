@@ -1,0 +1,8 @@
+[Unit]
+Description=NXBlogger automatic update from GitHub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash @@APP_DIR@@/update.sh

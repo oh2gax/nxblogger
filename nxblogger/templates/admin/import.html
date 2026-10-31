@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Import – Maintenance{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Import from WordPress</h1>
+  <p class="muted">
+    In WordPress go to <strong>Tools → Export → All content</strong> and download the XML file.
+    Images are not inside the XML: upload a <strong>.zip of <code>wp-content/uploads</code></strong> from your backup,
+    or let the importer download them from the old site while it is still online.
+    Importing again is safe – posts imported earlier are skipped unless you choose to update them.
+  </p>
+
+  <form method="post" enctype="multipart/form-data" class="form" id="import-form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>WordPress export file (.xml)
+      <input type="file" name="wxr" accept=".xml,text/xml,application/xml" required>
+    </label>
+    <label>Uploads archive (.zip, optional)
+      <input type="file" name="uploads_zip" accept=".zip,application/zip">
+    </label>
+    <div class="checks">
+      <label class="check"><input type="checkbox" name="include_drafts" value="1" checked> Import drafts as drafts</label>
+      <label class="check"><input type="checkbox" name="include_pages" value="1"> Import pages as posts too</label>
+      <label class="check"><input type="checkbox" name="download_images" value="1"> Download missing images from the old site</label>
+      <label class="check"><input type="checkbox" name="update_existing" value="1"> Update posts imported earlier</label>
+    </div>
+    <button type="submit" class="btn" id="import-btn">Start import</button>
+    <p class="hint muted">Big sites (hundreds of images to download) are faster with the command line importer – see README.</p>
+  </form>
+</div>
+
+{% if report %}
+<div class="card">
+  <h2>Import report</h2>
+  <ul class="report">
+    <li><strong>{{ report.imported }}</strong> new posts</li>
+    <li><strong>{{ report.updated }}</strong> updated</li>
+    <li><strong>{{ report.skipped }}</strong> skipped</li>
+    <li><strong>{{ report.files_copied }}</strong> files copied from zip</li>
+    <li><strong>{{ report.images_downloaded }}</strong> images downloaded{% if report.image_failures %}, {{ report.image_failures }} failed{% endif %}</li>
+  </ul>
+  {% if report.messages %}
+  <details><summary>Notes ({{ report.messages | length }})</summary>
+    <ul class="small">{% for m in report.messages[:200] %}<li>{{ m }}</li>{% endfor %}</ul>
+  </details>
+  {% endif %}
+  <a class="btn btn-soft" href="{{ url_for('admin.dashboard') }}">Go to posts</a>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('import-form').addEventListener('submit', function () {
+    var b = document.getElementById('import-btn'); b.disabled = true; b.textContent = 'Importing… please wait';
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{% if tag %}#{{ tag }} – {% elif q %}Search: {{ q }} – {% endif %}{{ blog_title }}{% endblock %}
+{% block content %}
+{% if tag %}
+  <div class="listing-head"><h1>Posts tagged <span class="tag tag-lg">{{ tag }}</span></h1><span class="muted">{{ total }} post{{ '' if total == 1 else 's' }}</span></div>
+{% elif q %}
+  <div class="listing-head"><h1>Search: “{{ q }}”</h1><span class="muted">{{ total }} result{{ '' if total == 1 else 's' }}</span></div>
+{% endif %}
+
+{% if posts %}
+<div class="post-list">
+  {% for p in posts %}
+  <article class="card post-card">
+    {% if p.cover_image %}
+    <a class="post-card-img" href="{{ url_for('public.post', slug=p.slug) }}" tabindex="-1" aria-hidden="true">
+      <img src="{{ p.cover_image }}" alt="" loading="lazy">
+    </a>
+    {% endif %}
+    <div class="post-card-body">
+      <time class="date" datetime="{{ p.published_at }}">{{ p.published_at | date }}</time>
+      <h2><a href="{{ url_for('public.post', slug=p.slug) }}">{{ p.title }}</a></h2>
+      {% if p.excerpt %}<p class="excerpt">{{ p.excerpt }}</p>{% endif %}
+      <a class="btn btn-soft btn-sm" href="{{ url_for('public.post', slug=p.slug) }}">Read more</a>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% include "_pagination.html" %}
+{% else %}
+<div class="card empty">
+  {% if q or tag %}
+    <p>Nothing found.</p>
+    <a class="btn btn-soft" href="{{ url_for('public.index') }}">Back to all posts</a>
+  {% else %}
+    <h2>Welcome to {{ blog_title }}</h2>
+    <p class="muted">No posts yet.</p>
+    {% if logged_in %}<a class="btn" href="{{ url_for('admin.new_post') }}">Write the first post</a>{% endif %}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

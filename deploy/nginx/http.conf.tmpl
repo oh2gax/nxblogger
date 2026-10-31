@@ -1,0 +1,15 @@
+
+# Port 80: Let's Encrypt validation + redirect to the HTTPS port.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name @@SERVER_NAME@@;
+
+    location /.well-known/acme-challenge/ {
+        root @@ACME_ROOT@@;
+    }
+
+    location / {
+        return 301 https://$host@@PORT_SUFFIX@@$request_uri;
+    }
+}

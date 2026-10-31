@@ -1,0 +1,27 @@
+[Unit]
+Description=NXBlogger blog (gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_USER@@
+WorkingDirectory=@@APP_DIR@@
+EnvironmentFile=/etc/nxblogger/nxblogger.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=@@APP_DIR@@/venv/bin/gunicorn --workers ${NXB_GUNICORN_WORKERS} --bind 127.0.0.1:${NXB_APP_PORT} --timeout 300 --access-logfile - --error-logfile - wsgi:app
+Restart=on-failure
+RestartSec=3
+UMask=0027
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=@@DATA_DIR@@
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

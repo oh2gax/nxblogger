@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if post else 'New post' }} – Maintenance{% endblock %}
+{% block body_class %}page-wide{% endblock %}
+{% block content %}
+<form method="post" id="post-form" class="editor-layout"
+      data-upload-url="{{ url_for('admin.upload') }}" data-csrf="{{ csrf_token() }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="content" id="content-input" value="{{ values.content }}">
+
+  <div class="card editor-main">
+    <input type="text" name="title" class="title-input" placeholder="Post title" value="{{ values.title }}" required maxlength="300">
+
+    <div class="editor-toolbar" id="toolbar" role="toolbar" aria-label="Formatting">
+      <button type="button" data-cmd="formatBlock" data-value="p" title="Paragraph">¶</button>
+      <button type="button" data-cmd="formatBlock" data-value="h2" title="Heading">H2</button>
+      <button type="button" data-cmd="formatBlock" data-value="h3" title="Subheading">H3</button>
+      <span class="sep"></span>
+      <button type="button" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+      <button type="button" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+      <button type="button" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+      <button type="button" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+      <span class="sep"></span>
+      <button type="button" data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
+      <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+      <button type="button" data-cmd="formatBlock" data-value="blockquote" title="Quote">❝</button>
+      <button type="button" data-cmd="formatBlock" data-value="pre" title="Code block">&lt;/&gt;</button>
+      <span class="sep"></span>
+      <button type="button" data-cmd="createLink" title="Insert link">🔗 Link</button>
+      <button type="button" data-cmd="unlink" title="Remove link">Unlink</button>
+      <button type="button" data-cmd="insertHorizontalRule" title="Divider">―</button>
+      <button type="button" id="btn-image" title="Insert image(s)">🖼 Image</button>
+      <span class="sep"></span>
+      <button type="button" data-cmd="removeFormat" title="Clear formatting">Clear</button>
+      <button type="button" data-cmd="undo" title="Undo (Ctrl+Z)">↶</button>
+      <button type="button" data-cmd="redo" title="Redo (Ctrl+Y)">↷</button>
+      <button type="button" id="btn-source" title="Edit HTML source">HTML</button>
+      <input type="file" id="image-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+    </div>
+
+    <div id="editor" class="editor post-content" contenteditable="true" spellcheck="true"
+         data-placeholder="Write your post… Paste a screenshot (Ctrl+V) or drop image files here."></div>
+    <textarea id="source" class="source-editor" hidden spellcheck="false"></textarea>
+    <div class="editor-status" id="editor-status" aria-live="polite"></div>
+  </div>
+
+  <aside class="card editor-side">
+    <h2>Publish</h2>
+    <label>Status
+      <select name="status">
+        <option value="draft" {% if values.status != 'published' %}selected{% endif %}>Draft</option>
+        <option value="published" {% if values.status == 'published' %}selected{% endif %}>Published</option>
+      </select>
+    </label>
+    <label>Date
+      <input type="datetime-local" name="published_at" value="{{ values.published_at }}">
+    </label>
+    <label>Tags <small class="muted">comma separated</small>
+      <input type="text" name="tags" value="{{ values.tags }}" placeholder="radio, antennas">
+    </label>
+    <details {% if values.excerpt %}open{% endif %}>
+      <summary>More options</summary>
+      <label>URL slug
+        <input type="text" name="slug" value="{{ values.slug }}" placeholder="auto from title">
+      </label>
+      <label>Summary <small class="muted">empty = automatic</small>
+        <textarea name="excerpt" rows="3">{{ values.excerpt }}</textarea>
+      </label>
+    </details>
+    <div class="side-buttons">
+      <button type="submit" name="action" value="save" class="btn btn-block">Save</button>
+      <button type="submit" name="action" value="view" class="btn btn-soft btn-block">Save &amp; view</button>
+      {% if post %}
+      <a class="btn btn-soft btn-block" href="{{ url_for('public.post', slug=post.slug) }}" target="_blank">Open post</a>
+      {% endif %}
+    </div>
+    <p class="hint muted">Ctrl+S saves. Images: use the Image button, paste from clipboard or drag &amp; drop.</p>
+  </aside>
+</form>
+
+{% if post %}
+<form method="post" action="{{ url_for('admin.delete_post', post_id=post.id) }}" class="delete-form"
+      onsubmit="return confirm('Delete this post permanently?');">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <button type="submit" class="btn btn-danger btn-sm">Delete post</button>
+</form>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/editor.js') }}?v={{ app_version }}" defer></script>{% endblock %}

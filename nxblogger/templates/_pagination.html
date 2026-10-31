@@ -1,0 +1,9 @@
+{% if pages > 1 %}
+<nav class="pagination">
+  {% set args = request.args.to_dict() %}
+  {% if page > 1 %}{% set _ = args.update(page=page-1) %}<a class="btn btn-soft" href="?{{ args | urlencode }}">← Newer</a>{% else %}<span></span>{% endif %}
+  <span class="muted">Page {{ page }} / {{ pages }}</span>
+  {% set args = request.args.to_dict() %}
+  {% if page < pages %}{% set _ = args.update(page=page+1) %}<a class="btn btn-soft" href="?{{ args | urlencode }}">Older →</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}

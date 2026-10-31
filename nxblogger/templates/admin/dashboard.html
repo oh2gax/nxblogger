@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Posts – Maintenance{% endblock %}
+{% block body_class %}page-mid{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="toolbar-row">
+    <h1>Posts</h1>
+    <a class="btn" href="{{ url_for('admin.new_post') }}">＋ New post</a>
+  </div>
+
+  <form class="filter-row" method="get">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search posts…">
+    <select name="status">
+      <option value="">All ({{ (counts.get('published', 0) + counts.get('draft', 0)) }})</option>
+      <option value="published" {% if status == 'published' %}selected{% endif %}>Published ({{ counts.get('published', 0) }})</option>
+      <option value="draft" {% if status == 'draft' %}selected{% endif %}>Drafts ({{ counts.get('draft', 0) }})</option>
+    </select>
+    <button class="btn btn-soft" type="submit">Filter</button>
+  </form>
+
+  {% if posts %}
+  <div class="table-wrap">
+  <table class="posts-table">
+    <thead><tr><th>Title</th><th>Status</th><th>Date</th><th class="actions-col">Actions</th></tr></thead>
+    <tbody>
+    {% for p in posts %}
+      <tr>
+        <td><a href="{{ url_for('admin.edit_post', post_id=p.id) }}" class="post-title-link">{{ p.title }}</a></td>
+        <td><span class="badge badge-{{ p.status }}">{{ 'Published' if p.status == 'published' else 'Draft' }}</span></td>
+        <td class="nowrap">{{ p.published_at | date }}</td>
+        <td class="actions">
+          <a class="btn btn-soft btn-sm" href="{{ url_for('admin.edit_post', post_id=p.id) }}">Edit</a>
+          <a class="btn btn-soft btn-sm" href="{{ url_for('public.post', slug=p.slug) }}" target="_blank">View</a>
+          <form method="post" action="{{ url_for('admin.toggle_status', post_id=p.id) }}" class="inline">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-soft btn-sm" type="submit">{{ 'Unpublish' if p.status == 'published' else 'Publish' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.delete_post', post_id=p.id) }}" class="inline"
+                onsubmit="return confirm('Delete this post permanently?');">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% include "_pagination.html" %}
+  {% else %}
+  <p class="muted">No posts found. <a href="{{ url_for('admin.new_post') }}">Write one</a> or <a href="{{ url_for('admin.wp_import') }}">import from WordPress</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}
