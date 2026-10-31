@@ -28,10 +28,11 @@ env_get() {  # env_get KEY [default]
 }
 
 env_set() {  # env_set KEY VALUE
-  local key="$1" value="$2"
+  local key="$1" value="$2" escaped
   touch "$ENV_FILE"
   if grep -qE "^$key=" "$ENV_FILE"; then
-    sed -i "s|^$key=.*|$key=$value|" "$ENV_FILE"
+    escaped="${value//\\/\\\\}"; escaped="${escaped//&/\\&}"; escaped="${escaped//|/\\|}"
+    sed -i "s|^$key=.*|$key=$escaped|" "$ENV_FILE"
   else
     printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
   fi
@@ -49,8 +50,8 @@ ensure_env_defaults() {
   fi
   env_default NXB_SECRET_KEY "$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
   env_default NXB_DATA_DIR "$DATA_DIR_DEFAULT"
-  env_default NXB_ADMIN_USER "oh2gax"
-  env_default NXB_BLOG_TITLE '"OH2GAX Blog"'
+  env_default NXB_ADMIN_USER "admin"
+  env_default NXB_BLOG_TITLE '"My Blog"'
   env_default NXB_HTTPS_PORT "8800"
   env_default NXB_APP_PORT "8801"
   env_default NXB_DOMAIN ""

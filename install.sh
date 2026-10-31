@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # NXBlogger installer for Ubuntu 24.04 LTS.
 #
-#   sudo bash install.sh --domain blog.oh2gax.org --port 8800 [--email you@example.com]
+#   sudo bash install.sh --domain blog.example.com [--port 8800] [--email you@example.com] \
+#        [--title "My Blog"] [--admin-user admin]
 #
 # Safe to run again: it keeps the database, uploads and settings, and only
 # updates what changed (options given on the command line are saved to
@@ -16,19 +17,21 @@ usage() {
   cat <<EOF
 Usage: sudo bash install.sh [options]
 
-  --domain NAME        DNS name of the blog (default: blog.oh2gax.org)
+  --domain NAME        DNS name of the blog, e.g. blog.example.com (required on first install)
   --port N             public HTTPS port nginx listens on (default: 8800)
   --app-port N         internal gunicorn port on 127.0.0.1 (default: 8801)
   --email ADDR         e-mail for Let's Encrypt expiry notices (optional)
   --self-signed        skip Let's Encrypt and use a self-signed certificate
   --auto-update        enable daily automatic update from GitHub (update.sh)
   --no-auto-update     disable the daily automatic update
+  --title TEXT         blog title (default: My Blog; can be changed later in Settings)
+  --admin-user NAME    admin user name (default: admin)
   --admin-password PW  initial password for the admin user (otherwise asked)
   -h, --help           show this help
 EOF
 }
 
-DOMAIN="" PORT="" APP_PORT="" EMAIL="" SELF_SIGNED=0 AUTO_UPDATE="" ADMIN_PW=""
+DOMAIN="" PORT="" APP_PORT="" EMAIL="" SELF_SIGNED=0 AUTO_UPDATE="" ADMIN_PW="" TITLE="" ADMIN_USER=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --domain) DOMAIN="$2"; shift 2 ;;
@@ -39,12 +42,20 @@ while [[ $# -gt 0 ]]; do
     --auto-update) AUTO_UPDATE=1; shift ;;
     --no-auto-update) AUTO_UPDATE=0; shift ;;
     --admin-password) ADMIN_PW="$2"; shift 2 ;;
+    --title) TITLE="$2"; shift 2 ;;
+    --admin-user) ADMIN_USER="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) usage; die "Unknown option: $1" ;;
   esac
 done
 
 require_root
+if [[ -n "$ADMIN_USER" && ! "$ADMIN_USER" =~ ^[A-Za-z0-9._-]{1,40}$ ]]; then
+  die "--admin-user may contain only letters, digits, dot, dash and underscore."
+fi
+if [[ -z "$DOMAIN" ]] && ! grep -qE "^NXB_DOMAIN=.+" "$ENV_FILE" 2>/dev/null; then
+  usage; die "--domain is required on the first install (e.g. --domain blog.example.com)"
+fi
 [[ "$APP_DIR" == /opt/* ]] || warn "Recommended location is /opt/nxblogger (now: $APP_DIR)."
 
 # --- 1. System packages --------------------------------------------------------
@@ -64,11 +75,9 @@ ensure_env_defaults
 [[ -n "$PORT" ]] && env_set NXB_HTTPS_PORT "$PORT"
 [[ -n "$APP_PORT" ]] && env_set NXB_APP_PORT "$APP_PORT"
 [[ -n "$EMAIL" ]] && env_set NXB_LE_EMAIL "$EMAIL"
-if [[ -n "$DOMAIN" ]]; then
-  env_set NXB_DOMAIN "$DOMAIN"
-elif [[ -z "$(env_get NXB_DOMAIN)" ]]; then
-  env_set NXB_DOMAIN "blog.oh2gax.org"
-fi
+[[ -n "$DOMAIN" ]] && env_set NXB_DOMAIN "$DOMAIN"
+[[ -n "$TITLE" ]] && env_set NXB_BLOG_TITLE "\"${TITLE//\"/}\""
+[[ -n "$ADMIN_USER" ]] && env_set NXB_ADMIN_USER "$ADMIN_USER"
 DOMAIN="$(env_get NXB_DOMAIN)"
 HTTPS_PORT="$(env_get NXB_HTTPS_PORT)"
 [[ "$(env_get NXB_APP_PORT)" != "$HTTPS_PORT" ]] || die "--app-port must differ from --port"

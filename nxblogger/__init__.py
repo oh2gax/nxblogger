@@ -42,7 +42,7 @@ def create_app(overrides=None):
             "csrf_token": csrf_token,
             "logged_in": is_logged_in(),
             "blog_title": dbmod.get_setting("blog_title", app.config["DEFAULT_TITLE"]),
-            "blog_subtitle": dbmod.get_setting("blog_subtitle", "Notes, projects and radio adventures"),
+            "blog_subtitle": dbmod.get_setting("blog_subtitle", "Notes, thoughts and projects"),
             "footer_text": dbmod.get_setting("footer_text", ""),
             "app_version": __version__,
         }

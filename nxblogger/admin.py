@@ -263,7 +263,7 @@ def settings():
         return redirect(url_for("admin.settings"))
     values = {
         "blog_title": get_setting("blog_title", current_app.config["DEFAULT_TITLE"]),
-        "blog_subtitle": get_setting("blog_subtitle", "Notes, projects and radio adventures"),
+        "blog_subtitle": get_setting("blog_subtitle", "Notes, thoughts and projects"),
         "footer_text": get_setting("footer_text", ""),
         "posts_per_page": get_setting("posts_per_page", "10"),
     }

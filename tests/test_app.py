@@ -24,7 +24,7 @@ def _new_post(admin, **kw):
 def test_home_shows_title(client):
     resp = client.get("/")
     assert resp.status_code == 200
-    assert "OH2GAX Blog" in resp.get_data(as_text=True)
+    assert "My Blog" in resp.get_data(as_text=True)
 
 
 def test_admin_requires_login(client):
@@ -36,14 +36,14 @@ def test_admin_requires_login(client):
 def test_wrong_password_and_throttle(client):
     token = get_csrf(client)
     for _ in range(5):
-        resp = client.post("/admin/login", data={"username": "oh2gax", "password": "nope", "_csrf": token})
+        resp = client.post("/admin/login", data={"username": "admin", "password": "nope", "_csrf": token})
         assert resp.status_code == 200
-    resp = client.post("/admin/login", data={"username": "oh2gax", "password": PASSWORD, "_csrf": token})
+    resp = client.post("/admin/login", data={"username": "admin", "password": PASSWORD, "_csrf": token})
     assert resp.status_code == 429
 
 
 def test_csrf_required(client):
-    resp = client.post("/admin/login", data={"username": "oh2gax", "password": PASSWORD})
+    resp = client.post("/admin/login", data={"username": "admin", "password": PASSWORD})
     assert resp.status_code == 400
 
 
@@ -107,7 +107,7 @@ def test_change_password(admin, app):
                                                "confirm_password": "brand-new-pw"})
     assert resp.status_code == 302
     conn = connect(app.config["DATABASE"])
-    row = conn.execute("SELECT password_hash FROM users WHERE username='oh2gax'").fetchone()
+    row = conn.execute("SELECT password_hash FROM users WHERE username='admin'").fetchone()
     assert row["password_hash"].startswith("scrypt:") and "brand-new-pw" not in row["password_hash"]
 
 

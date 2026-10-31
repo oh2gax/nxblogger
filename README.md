@@ -1,4 +1,4 @@
-# NXBlogger – OH2GAX Blog
+# NXBlogger
 
 A small, calm blog publishing system written in Python (Flask), served by gunicorn behind nginx with HTTPS.
 It can import an existing WordPress blog from a WordPress export file.
@@ -9,17 +9,20 @@ It can import an existing WordPress blog from a WordPress export file.
 - WordPress import (posts, drafts, tags, captions, galleries, featured images, image files)
 - No comments, no tracking, no external CDNs
 - Runs as a systemd service on Ubuntu 24.04 LTS; HTTPS on a port you choose (default **8800**)
-- Let's Encrypt certificate for **blog.oh2gax.org**, renewed automatically
+- Free Let's Encrypt certificate for your domain, renewed automatically
 - `update.sh` pulls new code from GitHub and restarts the service
 
-Admin user: **oh2gax**. The password is stored only as a salted scrypt hash (one-way), never in plain text.
+One admin user (default name **admin**, chosen at install time). The password is stored only as a salted
+scrypt hash (one-way), never in plain text.
+
+Examples below use `blog.example.com` – replace it with your own domain.
 
 ---
 
 ## Contents
 
 1. [Project layout](#1-project-layout)
-2. [Push the code to GitHub (from Windows)](#2-push-the-code-to-github-from-windows)
+2. [Get the code](#2-get-the-code)
 3. [Prepare the AWS instance](#3-prepare-the-aws-instance)
 4. [Install on the server](#4-install-on-the-server)
 5. [Updating](#5-updating)
@@ -69,25 +72,30 @@ On the server:
 | nginx site | `/etc/nginx/sites-available/nxblogger` |
 | Service | `nxblogger.service` (runs as user `nxblogger`) |
 
-## 2. Push the code to GitHub (from Windows)
+## 2. Get the code
 
-In `C:\Coding\nxblogger` (Git Bash or PowerShell):
+The official repository is **https://github.com/oh2gax/nxblogger**. To run the blog as it is, just clone it
+on the server (section 4).
+
+If you want to make your own changes, **fork** the repository on GitHub and use your fork's URL everywhere
+below. `update.sh` then pulls from your fork.
+
+Working on Windows (e.g. in `C:\Coding\nxblogger`) and pushing to your fork:
 
 ```bash
-git init -b main
+git clone https://github.com/<your-github-user>/nxblogger.git
+cd nxblogger
+# ...edit...
 git add .
-# Windows does not store the executable bit - mark the scripts executable for Linux:
-git update-index --add --chmod=+x install.sh update.sh manage.py
-git commit -m "NXBlogger 1.0.0"
-git remote add origin https://github.com/oh2gax/nxblogger.git
-git push -u origin main
+git commit -m "Describe the change"
+git push
 ```
 
 `.gitattributes` keeps Unix line endings (LF) for all files, so the shell scripts work on Ubuntu even when
-they are edited on Windows. (You can always run the scripts with `sudo bash script.sh`, so the executable
-bit is just a convenience.)
+they are edited on Windows. Run the scripts with `sudo bash script.sh`. If you add new scripts on Windows, mark them
+executable with `git update-index --chmod=+x script.sh`.
 
-**Private repository?** The server needs read access. The easiest way is a *deploy key*:
+**Private fork?** The server needs read access. The easiest way is a *deploy key*:
 
 ```bash
 # on the server
@@ -95,14 +103,14 @@ sudo ssh-keygen -t ed25519 -f /root/.ssh/nxblogger_deploy -N ""
 sudo cat /root/.ssh/nxblogger_deploy.pub
 # GitHub → repo → Settings → Deploy keys → Add key (read-only), paste the key
 printf 'Host github.com\n  IdentityFile /root/.ssh/nxblogger_deploy\n' | sudo tee -a /root/.ssh/config
-# then clone with the SSH URL: git@github.com:oh2gax/nxblogger.git
+# then clone with the SSH URL: git@github.com:<your-github-user>/nxblogger.git
 ```
 
 ## 3. Prepare the AWS instance
 
 1. Ubuntu Server 24.04 LTS, e.g. t3.micro / t3.small, with 10+ GB disk.
 2. Attach an **Elastic IP**, so the address does not change when the instance restarts.
-3. DNS: create an **A record** `blog.oh2gax.org → <Elastic IP>`.
+3. DNS: create an **A record** for your blog name, e.g. `blog.example.com → <Elastic IP>`.
 4. **Security group** inbound rules:
 
    | Port | Why |
@@ -117,10 +125,11 @@ printf 'Host github.com\n  IdentityFile /root/.ssh/nxblogger_deploy\n' | sudo te
 ## 4. Install on the server
 
 ```bash
-ssh ubuntu@blog.oh2gax.org
+ssh ubuntu@blog.example.com
 sudo apt-get update && sudo apt-get install -y git
-sudo git clone https://github.com/oh2gax/nxblogger.git /opt/nxblogger
-sudo bash /opt/nxblogger/install.sh --domain blog.oh2gax.org --port 8800 --email you@example.com
+sudo git clone https://github.com/oh2gax/nxblogger.git /opt/nxblogger   # or your fork
+sudo bash /opt/nxblogger/install.sh --domain blog.example.com --port 8800 \
+     --title "My Blog" --admin-user admin --email you@example.com
 ```
 
 The installer:
@@ -129,23 +138,25 @@ The installer:
 2. creates the service user `nxblogger` and the data folders,
 3. writes `/etc/nxblogger/nxblogger.env` with a random secret key,
 4. creates the Python virtualenv and the database,
-5. **asks for the admin password** for user `oh2gax` (or use `--admin-password`),
+5. **asks for the admin password** for the admin user (or use `--admin-password`),
 6. configures nginx for HTTPS on port 8800 and starts the `nxblogger` service,
-7. requests a **Let's Encrypt** certificate for `blog.oh2gax.org` and sets up automatic renewal.
+7. requests a **Let's Encrypt** certificate for your domain and sets up automatic renewal.
 
-Then open **https://blog.oh2gax.org:8800/**. The maintenance pages are at
-**https://blog.oh2gax.org:8800/admin/** (there is also a small *Login* link in the footer).
+Then open **https://blog.example.com:8800/**. The maintenance pages are at
+**https://blog.example.com:8800/admin/** (there is also a small *Login* link in the footer).
 
 Installer options:
 
 | Option | Default | Meaning |
 |---|---|---|
-| `--domain NAME` | `blog.oh2gax.org` | DNS name of the blog |
+| `--domain NAME` | – (required) | DNS name of the blog, e.g. `blog.example.com` |
 | `--port N` | `8800` | public HTTPS port (use `443` for a URL without a port) |
 | `--app-port N` | `8801` | internal gunicorn port (127.0.0.1 only) |
 | `--email ADDR` | – | e-mail for Let's Encrypt expiry notices |
 | `--self-signed` | – | skip Let's Encrypt (browser will warn) |
 | `--auto-update` / `--no-auto-update` | off | daily automatic `update.sh` run |
+| `--title TEXT` | `My Blog` | blog title (can be changed later in Settings) |
+| `--admin-user NAME` | `admin` | admin user name |
 | `--admin-password PW` | asked | initial admin password |
 
 The installer can be run again at any time, for example to change the port
@@ -162,7 +173,7 @@ The installer can be run again at any time, for example to change the port
 
 ## 5. Updating
 
-Workflow: make changes on Windows → commit → `git push`. Then on the server:
+Workflow: make changes on Windows → commit → `git push` (to your fork). Then on the server:
 
 ```bash
 sudo bash /opt/nxblogger/update.sh
@@ -219,7 +230,7 @@ click **Start import**. Uploads up to 200 MB are accepted (`NXB_MAX_UPLOAD_MB`).
 
 ### 7.3 Import from the command line (large blogs)
 
-Copy the files to the server (from Windows, e.g. `scp export.xml uploads.zip ubuntu@blog.oh2gax.org:/tmp/`), then:
+Copy the files to the server (from Windows, e.g. `scp export.xml uploads.zip ubuntu@blog.example.com:/tmp/`), then:
 
 ```bash
 sudo chmod 644 /tmp/export.xml /tmp/uploads.zip
@@ -262,10 +273,10 @@ service is restarted.
 |---|---|---|
 | `NXB_HTTPS_PORT` | 8800 | public HTTPS port (nginx) |
 | `NXB_APP_PORT` | 8801 | internal gunicorn port |
-| `NXB_DOMAIN` | blog.oh2gax.org | server name / certificate name |
+| `NXB_DOMAIN` | – | server name / certificate name |
 | `NXB_LE_EMAIL` | – | Let's Encrypt e-mail |
-| `NXB_ADMIN_USER` | oh2gax | admin user name |
-| `NXB_BLOG_TITLE` | OH2GAX Blog | default title (can be changed in Settings) |
+| `NXB_ADMIN_USER` | admin | admin user name |
+| `NXB_BLOG_TITLE` | My Blog | default title (can be changed in Settings) |
 | `NXB_TIMEZONE` | Europe/Helsinki | time zone for post dates |
 | `NXB_MAX_UPLOAD_MB` | 200 | max request size (imports) |
 | `NXB_MAX_IMAGE_MB` | 25 | max size of one image |
@@ -285,7 +296,7 @@ The blog title, subtitle, footer text and posts per page are changed in **Mainte
   ```
 
 - Copy the backups off the server now and then, e.g. from Windows:
-  `scp ubuntu@blog.oh2gax.org:/var/lib/nxblogger/backups/* .`. Backups need root to read; copy them
+  `scp ubuntu@blog.example.com:/var/lib/nxblogger/backups/* .`. Backups need root to read; copy them
   to `/tmp` first with `sudo cp`. You can also take an AWS EBS snapshot.
 
 **Restore** (example):
