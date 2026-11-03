@@ -8,7 +8,7 @@ from .auth import check_csrf, csrf_token, is_logged_in
 from .config import build_config
 from .content import parse_dt
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 def create_app(overrides=None):

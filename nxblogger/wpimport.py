@@ -203,7 +203,11 @@ def convert_content(raw: str, attachments: dict, children: list) -> str:
         token = f"nxbblock{i}x"
         text = re.sub(rf"<p>\s*{token}\s*(?:<br\s*/?>)?\s*</p>", lambda _m, b=block: b, text)
         text = re.sub(rf"{token}(?:<br\s*/?>)?", lambda _m, b=block: b, text)
-    return text
+
+    # Tidy up: empty paragraphs and the blank lines the block editor leaves behind.
+    text = re.sub(r"<p[^>]*>(?:\s|&nbsp;| |<br\s*/?>)*</p>", "", text, flags=re.I)
+    text = re.sub(r"\n[ \t]*(?:\n[ \t]*)+", "\n", text)
+    return text.strip()
 
 
 # --- Files: zip/dir copy, URL rewriting, downloads ----------------------------

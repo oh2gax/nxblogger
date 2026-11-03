@@ -156,6 +156,12 @@ https://www.youtube.com/watch?v=dQw4w9WgXcQ
     <title>Gutenberg post</title>
     <content:encoded><![CDATA[<!-- wp:paragraph -->
 <p>Block <strong>editor</strong> text.</p>
+<!-- /wp:paragraph -->
+
+
+
+<!-- wp:paragraph -->
+<p></p>
 <!-- /wp:paragraph -->]]></content:encoded>
     <wp:post_id>11</wp:post_id>
     <wp:post_date><![CDATA[2022-01-01 10:00:00]]></wp:post_date>
@@ -215,6 +221,7 @@ def test_wordpress_import(app, tmp_path):
         draft = conn.execute("SELECT * FROM posts WHERE wp_id=11").fetchone()
         assert draft["status"] == "draft" and "wp:paragraph" not in draft["content"]
         assert "<strong>editor</strong>" in draft["content"]
+        assert "<p></p>" not in draft["content"] and "\n\n" not in draft["content"]
 
         # Re-import skips existing posts.
         report2 = run_import(conn, xml, None, ImportOptions(), upload_dir=app.config["UPLOAD_DIR"])

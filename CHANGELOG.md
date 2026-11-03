@@ -2,6 +2,19 @@
 
 All notable changes to NXBlogger are recorded here, one entry per day (DD-MM-YYYY).
 
+## 03-11-2026 – version 1.0.1
+
+### WordPress import
+- Removes the empty paragraphs and extra blank lines that the WordPress block editor leaves behind, so the HTML view in the editor stays tidy.
+- Tested with a real WordPress 7.1 export: 12 block-editor posts and 220 images imported, no image links left pointing to the old site.
+
+### Blog
+- Block-editor galleries (`wp-block-gallery`) are shown as an image grid; a gallery with one image is shown as a normal centred image.
+- Tall portrait photos are limited to 80 % of the screen height and centred instead of filling the whole page.
+
+### Repository
+- `wp_backup/` is git-ignored, so WordPress export and backup files placed there are never committed.
+
 ## 31-10-2026 – version 1.0.0
 
 First version.
