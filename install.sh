@@ -80,7 +80,22 @@ ensure_env_defaults
 [[ -n "$ADMIN_USER" ]] && env_set NXB_ADMIN_USER "$ADMIN_USER"
 DOMAIN="$(env_get NXB_DOMAIN)"
 HTTPS_PORT="$(env_get NXB_HTTPS_PORT)"
-[[ "$(env_get NXB_APP_PORT)" != "$HTTPS_PORT" ]] || die "--app-port must differ from --port"
+APP_PORT="$(env_get NXB_APP_PORT)"
+[[ "$APP_PORT" != "$HTTPS_PORT" ]] || die "--app-port must differ from --port"
+
+# --- Safety checks for servers that already run other nginx sites / apps -------
+# Another enabled nginx site must not serve the same name.
+conflicts="$(grep -lsE "^[[:space:]]*server_name[^;]*[[:space:]]${DOMAIN//./\\.}([[:space:];]|$)" \
+              /etc/nginx/sites-enabled/* /etc/nginx/conf.d/*.conf 2>/dev/null \
+              | xargs -r readlink -f | grep -vx "$NGINX_SITE" || true)"
+if [[ -n "$conflicts" ]]; then
+  die "Another nginx site already uses $DOMAIN: $(echo "$conflicts" | tr '\n' ' ')
+       Disable it first (sudo rm /etc/nginx/sites-enabled/<name>), then run install.sh again."
+fi
+# The internal gunicorn port must be free (unless it is our own service).
+if ss -ltnH "sport = :$APP_PORT" 2>/dev/null | grep -q . && ! systemctl is-active --quiet nxblogger; then
+  die "Port $APP_PORT is already used by another program. Choose another one with --app-port N."
+fi
 
 # --- 4. Directories, Python environment, database --------------------------------
 fix_permissions
@@ -120,10 +135,6 @@ fi
 # --- 6. nginx ------------------------------------------------------------------------
 log "Configuring nginx (HTTPS on port $HTTPS_PORT)"
 render_nginx
-if [[ -L /etc/nginx/sites-enabled/default ]]; then
-  rm -f /etc/nginx/sites-enabled/default
-  log "Disabled nginx default site"
-fi
 nginx -t
 systemctl enable --quiet nginx
 systemctl restart nginx
@@ -168,7 +179,7 @@ else
       log "Let's Encrypt certificate installed (renews automatically via certbot.timer)"
     else
       warn "Let's Encrypt failed. Check that $DOMAIN points to this server and that TCP port 80 is open"
-      warn "in the AWS security group, then run: sudo bash $APP_DIR/install.sh"
+      warn "in the firewall (AWS security group / Lightsail Networking tab), then run: sudo bash $APP_DIR/install.sh"
       warn "The blog keeps working with the self-signed certificate meanwhile."
     fi
   fi
@@ -189,4 +200,4 @@ echo
 log "NXBlogger is running."
 log "  Blog:        https://$DOMAIN$suffix/"
 log "  Maintenance: https://$DOMAIN$suffix/admin/   (user: $(env_get NXB_ADMIN_USER))"
-log "  Open in the AWS security group: TCP $HTTPS_PORT (blog) and TCP 80 (Let's Encrypt)."
+log "  Firewall (AWS security group / Lightsail Networking): open TCP $HTTPS_PORT and TCP 80."

@@ -12,6 +12,12 @@ All notable changes to NXBlogger are recorded here, one entry per day (DD-MM-YYY
 - Block-editor galleries (`wp-block-gallery`) are shown as an image grid; a gallery with one image is shown as a normal centred image.
 - Tall portrait photos are limited to 80 % of the screen height and centred instead of filling the whole page.
 
+### Installer
+- Works on servers that already run other nginx sites: the nginx default site is no longer disabled.
+- Stops with a clear message if another enabled nginx site already uses the blog's domain name, or if the internal
+  app port (`--app-port`, default 8801) is taken by another program.
+- Messages mention the Lightsail firewall as well as AWS security groups. README section 4.1 covers shared servers.
+
 ### Repository
 - `wp_backup/` is git-ignored, so WordPress export and backup files placed there are never committed.
 

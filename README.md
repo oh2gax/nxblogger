@@ -124,6 +124,8 @@ printf 'Host github.com\n  IdentityFile /root/.ssh/nxblogger_deploy\n' | sudo te
 
 ## 4. Install on the server
 
+> **Server already runs nginx and other sites?** That is fine – see [4.1](#41-servers-that-already-run-nginx).
+
 ```bash
 ssh ubuntu@blog.example.com
 sudo apt-get update && sudo apt-get install -y git
@@ -161,6 +163,25 @@ Installer options:
 
 The installer can be run again at any time, for example to change the port
 (`sudo bash /opt/nxblogger/install.sh --port 443`). Data and settings are kept.
+
+### 4.1 Servers that already run nginx
+
+NXBlogger adds one nginx site file (`/etc/nginx/sites-available/nxblogger`) and leaves the other sites alone,
+so it can share a server with other web apps and `certbot --nginx` certificates.
+
+- **Same HTTPS port as your other sites:** nginx picks the site by its name, so several sites can share
+  port 443. Use `--port 443` and the blog gets clean addresses like `https://blog.example.com/`.
+- **Internal port:** gunicorn uses `127.0.0.1:8801`. If another program already uses it, the installer stops;
+  pick a free one with `--app-port N`. Check used ports with `sudo ss -ltnp`.
+- **Same name in another site:** if another enabled nginx site already has `server_name blog.example.com`
+  (for example an old blog), the installer stops and names the file. Disable that site first.
+- **Certificates:** NXBlogger gets its own certificate with certbot's *webroot* method. Your other
+  certificates and their renewals are not affected.
+- The installer restarts nginx once (other sites pause for about a second) and installs the code in
+  `/opt/nxblogger`, running as its own `nxblogger` user, not in your home folder.
+
+**AWS Lightsail:** Lightsail has its own firewall instead of security groups: instance → **Networking** →
+IPv4 and IPv6 firewall. Ports 80 and 443 must be allowed (plus your own `--port` if it's not 443).
 
 ### About Let's Encrypt
 
