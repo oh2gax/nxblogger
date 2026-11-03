@@ -23,6 +23,11 @@ All notable changes to NXBlogger are recorded here, one entry per day (DD-MM-YYY
 - The data folder uses a shared `nxblogger` group, with the setgid bit on folders, so nginx can always read uploads.
 - The service sets `HOME` to the data folder, because newer gunicorn versions keep a control socket in `$HOME`.
 - `manage.py import-wp` gives a clear message instead of a Python error when the export file or uploads zip is missing.
+- Fixed: the database backup made by `update.sh` kept only the newest 10 files and thereby also deleted older nightly
+  backups. Both now keep the newest 30.
+
+### Documentation
+- New `doc/NXBlogger-Guide.pdf`: installation, update, backup and user guide (19 pages, with screenshots).
 
 ### Repository
 - `wp_backup/` is git-ignored, so WordPress export and backup files placed there are never committed.

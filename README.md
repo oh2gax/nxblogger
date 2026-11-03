@@ -17,6 +17,9 @@ scrypt hash (one-way), never in plain text.
 
 Examples below use `blog.example.com` – replace it with your own domain.
 
+📘 **A printable guide** with screenshots (installation, writing posts, updating, backups) is in
+[`doc/NXBlogger-Guide.pdf`](doc/NXBlogger-Guide.pdf).
+
 ---
 
 ## Contents
@@ -212,7 +215,7 @@ sudo bash /opt/nxblogger/update.sh
 
 1. fetches from GitHub and stops if there is nothing new (`--force` re-applies anyway),
 2. shows the new commits and fast-forwards the code,
-3. backs up the database (`/var/lib/nxblogger/backups`, newest 10 kept),
+3. backs up the database (`/var/lib/nxblogger/backups`; together with the nightly backups the newest 30 are kept),
 4. updates the Python packages from `requirements.txt`,
 5. migrates the database,
 6. regenerates the nginx and systemd config from the templates and reloads nginx,

@@ -46,7 +46,8 @@ apply_phase() {
   load_service_user
 
   log "Backing up database"
-  manage backup --db-only --keep 10 || warn "Backup failed (continuing)"
+  # Same rotation as the nightly backup timer (both write nxblogger-*.db).
+  manage backup --db-only --keep 30 || warn "Backup failed (continuing)"
 
   setup_venv
   log "Migrating database"
