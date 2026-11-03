@@ -62,6 +62,14 @@ def cmd_has_admin(app, _args):
 def cmd_import_wp(app, args):
     from nxblogger.wpimport import ImportOptions, run_import
 
+    xml_path = Path(args.xml).expanduser()
+    if not xml_path.is_file():
+        sys.exit(f"Export file not found: {xml_path}\n"
+                 "Copy the WordPress export (.xml) to the server first, e.g. with WinSCP or scp.")
+    if args.uploads and not Path(args.uploads).expanduser().exists():
+        sys.exit(f"Uploads zip/folder not found: {args.uploads}")
+    args.xml = str(xml_path)
+
     opts = ImportOptions(
         include_pages=args.include_pages,
         include_drafts=not args.skip_drafts,
