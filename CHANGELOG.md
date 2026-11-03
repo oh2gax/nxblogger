@@ -17,6 +17,11 @@ All notable changes to NXBlogger are recorded here, one entry per day (DD-MM-YYY
 - Stops with a clear message if another enabled nginx site already uses the blog's domain name, or if the internal
   app port (`--app-port`, default 8801) is taken by another program.
 - Messages mention the Lightsail firewall as well as AWS security groups. README section 4.1 covers shared servers.
+- The code can live in a home folder (e.g. `/home/ubuntu/nxblogger`). The service then runs as that user, and
+  `update.sh` runs git and pip as the folder's owner, so files stay owned by that user and the user's own GitHub key is used.
+  nginx serves a copy of the static files from `/var/lib/nxblogger/static`, because it may not read home folders.
+- The data folder uses a shared `nxblogger` group, with the setgid bit on folders, so nginx can always read uploads.
+- The service sets `HOME` to the data folder, because newer gunicorn versions keep a control socket in `$HOME`.
 
 ### Repository
 - `wp_backup/` is git-ignored, so WordPress export and backup files placed there are never committed.

@@ -62,15 +62,16 @@ On the server:
 
 | What | Where |
 |---|---|
-| Program (git clone) | `/opt/nxblogger` |
-| Python virtualenv | `/opt/nxblogger/venv` |
+| Program (git clone) | `/opt/nxblogger` – or a folder in your home, e.g. `/home/ubuntu/nxblogger` |
+| Python virtualenv | `<program folder>/venv` |
 | Configuration | `/etc/nxblogger/nxblogger.env` |
 | Database (SQLite) | `/var/lib/nxblogger/data/nxblogger.db` |
 | Uploaded images | `/var/lib/nxblogger/uploads/` |
 | Backups | `/var/lib/nxblogger/backups/` |
 | TLS certificate links | `/etc/nxblogger/ssl/` |
 | nginx site | `/etc/nginx/sites-available/nxblogger` |
-| Service | `nxblogger.service` (runs as user `nxblogger`) |
+| Service | `nxblogger.service` (runs as user `nxblogger`, or as you when the code is in your home folder) |
+| Static files served by nginx | `/var/lib/nxblogger/static/` (copied from the program at install/update) |
 
 ## 2. Get the code
 
@@ -95,15 +96,17 @@ git push
 they are edited on Windows. Run the scripts with `sudo bash script.sh`. If you add new scripts on Windows, mark them
 executable with `git update-index --chmod=+x script.sh`.
 
-**Private fork?** The server needs read access. The easiest way is a *deploy key*:
+**Private fork?** The server needs read access. The easiest way is a read-only *deploy key*. The
+`github-nxblogger` host alias keeps it separate from any other GitHub keys on the server. Run these as the user
+that will own the code: yourself for a home-folder install, or with `sudo -i` (root) for `/opt`:
 
 ```bash
-# on the server
-sudo ssh-keygen -t ed25519 -f /root/.ssh/nxblogger_deploy -N ""
-sudo cat /root/.ssh/nxblogger_deploy.pub
-# GitHub → repo → Settings → Deploy keys → Add key (read-only), paste the key
-printf 'Host github.com\n  IdentityFile /root/.ssh/nxblogger_deploy\n' | sudo tee -a /root/.ssh/config
-# then clone with the SSH URL: git@github.com:<your-github-user>/nxblogger.git
+ssh-keygen -t ed25519 -f ~/.ssh/nxblogger_deploy -N ""
+printf 'Host github-nxblogger\n  HostName github.com\n  IdentityFile ~/.ssh/nxblogger_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+chmod 600 ~/.ssh/config
+cat ~/.ssh/nxblogger_deploy.pub
+# GitHub → repo → Settings → Deploy keys → Add deploy key (leave write access off), paste the key
+git clone git@github-nxblogger:<your-github-user>/nxblogger.git ~/nxblogger
 ```
 
 ## 3. Prepare the AWS instance
@@ -130,6 +133,8 @@ printf 'Host github.com\n  IdentityFile /root/.ssh/nxblogger_deploy\n' | sudo te
 ssh ubuntu@blog.example.com
 sudo apt-get update && sudo apt-get install -y git
 sudo git clone https://github.com/oh2gax/nxblogger.git /opt/nxblogger   # or your fork
+# ...or in your home folder (the service then runs as you, like your other home-folder apps):
+#   git clone https://github.com/oh2gax/nxblogger.git ~/nxblogger   and use ~/nxblogger below
 sudo bash /opt/nxblogger/install.sh --domain blog.example.com --port 8800 \
      --title "My Blog" --admin-user admin --email you@example.com
 ```
@@ -177,8 +182,11 @@ so it can share a server with other web apps and `certbot --nginx` certificates.
   (for example an old blog), the installer stops and names the file. Disable that site first.
 - **Certificates:** NXBlogger gets its own certificate with certbot's *webroot* method. Your other
   certificates and their renewals are not affected.
-- The installer restarts nginx once (other sites pause for about a second) and installs the code in
-  `/opt/nxblogger`, running as its own `nxblogger` user, not in your home folder.
+- The installer restarts nginx once (other sites pause for about a second).
+- **Code in your home folder** (e.g. `/home/ubuntu/nxblogger`, cloned as yourself without sudo) is fine: the
+  service then runs as you, `update.sh` runs git and pip as you, so your files stay yours, and nginx serves a
+  copy of the static files from `/var/lib/nxblogger/static`. Code in `/opt/nxblogger` runs as its own
+  `nxblogger` user.
 
 **AWS Lightsail:** Lightsail has its own firewall instead of security groups: instance → **Networking** →
 IPv4 and IPv6 firewall. Ports 80 and 443 must be allowed (plus your own `--port` if it's not 443).
@@ -357,7 +365,7 @@ Run the tests with `python -m pytest`.
 | Page does not open | Is port 8800 open in the AWS security group? `curl -k https://localhost:8800/healthz` on the server |
 | Certificate warning | Let's Encrypt not done yet – check DNS and port 80, then re-run `install.sh` |
 | "Upload is too large" | Raise `NXB_MAX_UPLOAD_MB` and run `update.sh --force` |
-| update.sh: local changes | `sudo git -C /opt/nxblogger status`, then `sudo git -C /opt/nxblogger checkout -- .` |
+| update.sh: local changes | `git -C <program folder> status`, then `git -C <program folder> checkout -- .` (with `sudo` for `/opt`) |
 | Timers | `systemctl list-timers 'nxblogger*'` |
 
 Health check endpoint: `/healthz` returns `{"status": "ok"}`.

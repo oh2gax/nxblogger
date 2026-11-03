@@ -56,7 +56,6 @@ fi
 if [[ -z "$DOMAIN" ]] && ! grep -qE "^NXB_DOMAIN=.+" "$ENV_FILE" 2>/dev/null; then
   usage; die "--domain is required on the first install (e.g. --domain blog.example.com)"
 fi
-[[ "$APP_DIR" == /opt/* ]] || warn "Recommended location is /opt/nxblogger (now: $APP_DIR)."
 
 # --- 1. System packages --------------------------------------------------------
 log "Installing system packages"
@@ -65,13 +64,12 @@ apt-get update -qq
 apt-get install -y -qq python3 python3-venv python3-pip nginx git openssl curl sqlite3 certbot >/dev/null
 
 # --- 2. Service user -------------------------------------------------------------
-if ! id "$SERVICE_USER" >/dev/null 2>&1; then
-  log "Creating system user $SERVICE_USER"
-  useradd --system --home-dir "$DATA_DIR_DEFAULT" --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
-fi
+ensure_service_account
 
 # --- 3. Configuration --------------------------------------------------------------
 ensure_env_defaults
+load_service_user
+log "Code in $APP_DIR, service runs as user '$SERVICE_USER'"
 [[ -n "$PORT" ]] && env_set NXB_HTTPS_PORT "$PORT"
 [[ -n "$APP_PORT" ]] && env_set NXB_APP_PORT "$APP_PORT"
 [[ -n "$EMAIL" ]] && env_set NXB_LE_EMAIL "$EMAIL"
@@ -99,6 +97,7 @@ fi
 
 # --- 4. Directories, Python environment, database --------------------------------
 fix_permissions
+sync_static
 setup_venv
 log "Preparing database"
 manage init-db

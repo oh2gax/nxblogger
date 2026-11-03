@@ -9,6 +9,8 @@ Group=@@SERVICE_USER@@
 WorkingDirectory=@@APP_DIR@@
 EnvironmentFile=/etc/nxblogger/nxblogger.env
 Environment=PYTHONUNBUFFERED=1
+# gunicorn keeps a small control socket in $HOME; the real home may be read-only (ProtectHome)
+Environment=HOME=@@DATA_DIR@@
 ExecStart=@@APP_DIR@@/venv/bin/gunicorn --workers ${NXB_GUNICORN_WORKERS} --bind 127.0.0.1:${NXB_APP_PORT} --timeout 300 --access-logfile - --error-logfile - wsgi:app
 Restart=on-failure
 RestartSec=3

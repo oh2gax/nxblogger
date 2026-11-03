@@ -21,7 +21,7 @@ server {
     error_log  /var/log/nginx/nxblogger.error.log;
 
     location /static/ {
-        alias @@APP_DIR@@/nxblogger/static/;
+        alias @@DATA_DIR@@/static/;
         expires 7d;
         access_log off;
     }
@@ -35,7 +35,7 @@ server {
     }
 
     location = /favicon.ico {
-        alias @@APP_DIR@@/nxblogger/static/favicon.svg;
+        alias @@DATA_DIR@@/static/favicon.svg;
         default_type image/svg+xml;
         access_log off;
     }

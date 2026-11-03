@@ -10,7 +10,9 @@ APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=deploy/common.sh
 source "$APP_DIR/deploy/common.sh"
 
-git_c() { git -C "$APP_DIR" -c safe.directory="$APP_DIR" "$@"; }
+# git runs as the owner of the code folder, so pulled files keep the right owner
+# and the owner's own GitHub access (SSH key) is used.
+git_c() { as_owner git -C "$APP_DIR" -c safe.directory="$APP_DIR" "$@"; }
 
 pull_phase() {
   local force="$1" old new branch
@@ -41,6 +43,7 @@ pull_phase() {
 apply_phase() {
   local old="$1"
   ensure_env_defaults
+  load_service_user
 
   log "Backing up database"
   manage backup --db-only --keep 10 || warn "Backup failed (continuing)"
@@ -49,6 +52,7 @@ apply_phase() {
   log "Migrating database"
   manage init-db
   fix_permissions
+  sync_static
   install_manage_wrapper
 
   log "Refreshing nginx and systemd configuration"

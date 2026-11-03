@@ -2,7 +2,8 @@
 # shellcheck shell=bash
 
 SERVICE_NAME="nxblogger"
-SERVICE_USER="nxblogger"
+SERVICE_GROUP="nxblogger"   # shared group: service user + nginx (www-data)
+SERVICE_USER="nxblogger"    # replaced by load_service_user()
 ENV_DIR="/etc/nxblogger"
 ENV_FILE="$ENV_DIR/nxblogger.env"
 SSL_DIR="$ENV_DIR/ssl"
@@ -17,6 +18,36 @@ die()  { printf '\033[1;31m[nxblogger] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
 require_root() {
   [[ $EUID -eq 0 ]] || die "Run as root, e.g.: sudo bash $0"
+}
+
+repo_owner() { stat -c %U "$APP_DIR"; }
+
+as_owner() {  # run a command as the owner of the code folder (keeps file ownership right)
+  local owner
+  owner="$(repo_owner)"
+  if [[ "$owner" == "root" ]]; then "$@"; else sudo -u "$owner" -H "$@"; fi
+}
+
+default_service_user() {
+  # Code in a home folder (e.g. /home/ubuntu/nxblogger): run as that user, like other
+  # home-folder apps. Code elsewhere (e.g. /opt/nxblogger): dedicated "nxblogger" user.
+  if [[ "$APP_DIR" == /home/* ]]; then repo_owner; else echo "nxblogger"; fi
+}
+
+load_service_user() { SERVICE_USER="$(env_get NXB_SERVICE_USER "$(default_service_user)")"; }
+
+ensure_service_account() {
+  local user
+  user="$(env_get NXB_SERVICE_USER "$(default_service_user)")"
+  getent group "$SERVICE_GROUP" >/dev/null || groupadd --system "$SERVICE_GROUP"
+  if [[ "$user" == "nxblogger" ]] && ! id nxblogger >/dev/null 2>&1; then
+    log "Creating system user nxblogger"
+    useradd --system --gid "$SERVICE_GROUP" --home-dir "$DATA_DIR_DEFAULT" --no-create-home \
+            --shell /usr/sbin/nologin nxblogger
+  fi
+  id "$user" >/dev/null 2>&1 || die "Service user '$user' does not exist."
+  usermod -aG "$SERVICE_GROUP" "$user"
+  usermod -aG "$SERVICE_GROUP" www-data 2>/dev/null || true
 }
 
 env_get() {  # env_get KEY [default]
@@ -48,6 +79,7 @@ ensure_env_defaults() {
   if [[ ! -f "$ENV_FILE" ]]; then
     printf '# NXBlogger configuration – used by the systemd service and manage.py\n' > "$ENV_FILE"
   fi
+  env_default NXB_SERVICE_USER "$(default_service_user)"
   env_default NXB_SECRET_KEY "$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
   env_default NXB_DATA_DIR "$DATA_DIR_DEFAULT"
   env_default NXB_ADMIN_USER "admin"
@@ -63,7 +95,7 @@ ensure_env_defaults() {
   env_default NXB_MAX_UPLOAD_MB "200"
   env_default NXB_MAX_IMAGE_MB "25"
   env_default NXB_GUNICORN_WORKERS "2"
-  chown root:"$SERVICE_USER" "$ENV_FILE" 2>/dev/null || true
+  chown root:"$SERVICE_GROUP" "$ENV_FILE" 2>/dev/null || true
   chmod 640 "$ENV_FILE"
 }
 
@@ -130,24 +162,36 @@ manage() {  # run manage.py as service user
 setup_venv() {
   if [[ ! -x "$APP_DIR/venv/bin/python" ]]; then
     log "Creating Python virtual environment"
-    python3 -m venv "$APP_DIR/venv"
+    as_owner python3 -m venv "$APP_DIR/venv"
   fi
   log "Installing Python packages"
-  "$APP_DIR/venv/bin/pip" install --quiet --upgrade pip
-  "$APP_DIR/venv/bin/pip" install --quiet -r "$APP_DIR/requirements.txt"
+  as_owner "$APP_DIR/venv/bin/pip" install --quiet --upgrade pip
+  as_owner "$APP_DIR/venv/bin/pip" install --quiet -r "$APP_DIR/requirements.txt"
 }
 
 fix_permissions() {
   local data_dir
   data_dir="$(env_get NXB_DATA_DIR "$DATA_DIR_DEFAULT")"
   mkdir -p "$data_dir/data" "$data_dir/uploads" "$data_dir/backups"
-  chown -R "$SERVICE_USER:$SERVICE_USER" "$data_dir"
-  chmod 750 "$data_dir" "$data_dir/uploads"
+  chown -R "$SERVICE_USER:$SERVICE_GROUP" "$data_dir"
+  # nginx (www-data, member of $SERVICE_GROUP) serves /uploads and /static directly.
+  # The setgid bit (2xxx) makes new files inherit the group, so nginx can read them.
+  chmod 2750 "$data_dir"
   chmod 700 "$data_dir/data" "$data_dir/backups"
-  find "$data_dir/uploads" -type d -exec chmod 750 {} + 2>/dev/null || true
+  find "$data_dir/uploads" -type d -exec chmod 2750 {} + 2>/dev/null || true
   find "$data_dir/uploads" -type f -exec chmod 640 {} + 2>/dev/null || true
-  # nginx (www-data) serves /uploads directly, so it needs group read access.
-  usermod -aG "$SERVICE_USER" www-data 2>/dev/null || true
+}
+
+sync_static() {  # nginx may not read a home folder, so serve a copy of the static files
+  local data_dir
+  data_dir="$(env_get NXB_DATA_DIR "$DATA_DIR_DEFAULT")"
+  rm -rf "$data_dir/static.new"
+  cp -r "$APP_DIR/nxblogger/static" "$data_dir/static.new"
+  chown -R "$SERVICE_USER:$SERVICE_GROUP" "$data_dir/static.new"
+  find "$data_dir/static.new" -type d -exec chmod 2750 {} +
+  find "$data_dir/static.new" -type f -exec chmod 640 {} +
+  rm -rf "$data_dir/static"
+  mv "$data_dir/static.new" "$data_dir/static"
 }
 
 health_check() {
